@@ -1,0 +1,256 @@
+-- Roblox LocalScript for Leven Hub in Steal a Brainrot using Rayfield UI
+-- Place in a LocalScript under StarterPlayerScripts or execute via an executor
+
+local player = game.Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- Load Rayfield Interface Suite
+local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Rayfield/main/source'))()
+local Window = Rayfield:CreateWindow({
+    Name = "Leven Hub - Steal a Brainrot",
+    LoadingTitle = "Very Cool Theme Loading",
+    LoadingSubtitle = "Brainrot Spawner",
+    ConfigurationSaving = { Enabled = true, FolderName = "LevenHub", FileName = "StealABrainrotConfig" },
+    Discord = { Enabled = false },
+    KeySystem = false,
+    Theme = "Dark" -- Sleek dark theme with neon accents
+})
+
+-- Main Tab
+local MainTab = Window:CreateTab("Main", 4483362458) -- Cool icon for theme
+local MainSection = MainTab:CreateSection("Brainrot Spawner")
+
+-- Mutations Dropdown (all mutations from Steal a Brainrot)
+local mutations = {
+    "Gold", "Diamond", "Rainbow", "Lava", "Bloodrot", "Celestial", "Candy", "Galaxy", "Onyx"
+}
+local selectedMutation = mutations[1]
+local MutationDropdown = MainTab:CreateDropdown({
+    Name = "Select Mutation",
+    Options = mutations,
+    CurrentOption = selectedMutation,
+    Callback = function(Option)
+        selectedMutation = Option
+        Rayfield:Notify({
+            Title = "Mutation Selected",
+            Content = "Selected: " .. Option,
+            Duration = 3
+        })
+    end
+})
+
+-- Brainrots Dropdown (real brainrots from Steal a Brainrot)
+local brainrots = {
+    -- Common
+    "Noobini Pizzanini", "Lirili Larila", "TIM Cheese", "Flurifura", "Talpa Di Fero",
+    "Svinia Bombardino", "Pipi Kiwi", "Racooni Jandelini", "Pipi Corni",
+    -- Rare
+    "Trippi Troppi", "Tung Tung Tung Sahur", "Gangster Footera", "Bandito Bobritto",
+    "Boneca Ambalabu", "Cacto Hipopotamo", "Ta Ta Ta Ta Sahur", "Tric Trac Baraboom",
+    "Pipi Avocado",
+    -- Epic
+    "Cappuccino Assassino", "Brr Brr Patapin", "Trulimero Trulicina", "Bambini Crostini",
+    "Bananita Dolphinita", "Perochello Lemonchello", "Brri Brri Bicus Dicus Bombicus",
+    "Avocadini Guffo", "Salamino Penguino", "Ti Ti Ti Sahur", "Penguino Cocosino",
+    -- Legendary
+    "Burbalini Loliloli", "Chimpanzini Bananini", "Ballerina Cappuccina", "Chef Crabracadabra",
+    "Lionel Cactuseli", "Glorbo Fruttodrillo", "Blueberrini Octapusini", "Strawberelli Flamingelli",
+    "Pandaccini Bananini", "Cocosini Mama", "Sigma Boy", "Pi Pi Watermelon",
+    -- Mythic
+    "Frigo Camelo", "Orangutini Ananasini", "Rhino Toasterino", "Bombardiro Crocodilo",
+    "Bombombini Gusini", "Ganganzelli Trulala",
+    -- Secret
+    "La Vacca Saturno Saturnita", "Los Tralaleritos", "Graipuss Medussi", "Nuclearo Dinossauro",
+    "Los Combinasionas", "Trippi Troppi Troppa Trippa",
+    -- Brainrot God
+    "Piccione Macchina", "Cocofanto Elefanto", "Los TungTungTungcitos", "Tartaruga Cisterna",
+    "Dragon Cannelloni"
+}
+local selectedBrainrot = brainrots[1]
+local BrainrotDropdown = MainTab:CreateDropdown({
+    Name = "Select Brainrot",
+    Options = brainrots,
+    CurrentOption = selectedBrainrot,
+    Callback = function(Option)
+        selectedBrainrot = Option
+        Rayfield:Notify({
+            Title = "Brainrot Selected",
+            Content = "Selected: " .. Option,
+            Duration = 3
+        })
+    end
+})
+
+-- Spawn Brainrot Button
+local SpawnButton = MainTab:CreateButton({
+    Name = "Spawn Brainrot",
+    Callback = function()
+        -- Find player's base
+        local base = Workspace:FindFirstChild(player.Name .. "'s Base") or
+                     Workspace:FindFirstChild("Tycoons") and Workspace.Tycoons:FindFirstChild(player.Name)
+        if not base then
+            Rayfield:Notify({
+                Title = "Error",
+                Content = "Base not found. Ensure you're in Steal a Brainrot.",
+                Duration = 5
+            })
+            return
+        end
+
+        -- Find an open spot in the base
+        local spots = base:GetDescendants()
+        local openSpot = nil
+        for _, spot in ipairs(spots) do
+            if spot:IsA("Part") and (spot.Name:match("Spot") or spot.Name:match("BrainrotSpot")) and #spot:GetChildren() == 0 then
+                openSpot = spot
+                break
+            end
+        end
+        if not openSpot then
+            Rayfield:Notify({
+                Title = "Error",
+                Content = "No open spot found in base.",
+                Duration = 5
+            })
+            return
+        end
+
+        -- Attempt server-side spawn via remote event
+        local success = false
+        local remote = ReplicatedStorage:FindFirstChild("PurchaseBrainrot") or
+                       ReplicatedStorage:FindFirstChild("BuyBrainrot") or
+                       ReplicatedStorage:FindFirstChild("SpawnBrainrot")
+        if remote then
+            pcall(function()
+                remote:FireServer(selectedBrainrot, selectedMutation)
+                success = true
+                Rayfield:Notify({
+                    Title = "Spawn Attempted",
+                    Content = "Attempted to spawn " .. selectedBrainrot .. " with " .. selectedMutation .. " mutation server-side.",
+                    Duration = 5
+                })
+            end)
+        end
+
+        -- Fallback to visual spawn if server-side fails
+        if not success then
+            Rayfield:Notify({
+                Title = "Fallback",
+                Content = "Server-side spawn failed. Creating visual brainrot.",
+                Duration = 5
+            })
+
+            -- Create visual brainrot model
+            local brainrotModel = Instance.new("Model")
+            brainrotModel.Name = selectedBrainrot .. " (" .. selectedMutation .. ")"
+            local brainrotPart = Instance.new("Part")
+            brainrotPart.Size = Vector3.new(2, 2, 2)
+            -- Apply mutation color
+            local mutationColors = {
+                Gold = Color3.fromRGB(255, 215, 0),
+                Diamond = Color3.fromRGB(0, 255, 255),
+                Rainbow = Color3.fromRGB(255, 0, 255),
+                Lava = Color3.fromRGB(255, 69, 0),
+                Bloodrot = Color3.fromRGB(139, 0, 0),
+                Celestial = Color3.fromRGB(135, 206, 235),
+                Candy = Color3.fromRGB(255, 105, 180),
+                Galaxy = Color3.fromRGB(75, 0, 130),
+                Onyx = Color3.fromRGB(10, 10, 10)
+            }
+            brainrotPart.Color = mutationColors[selectedMutation] or Color3.fromRGB(255, 0, 0)
+            brainrotPart.Anchored = true
+            brainrotPart.CanCollide = false
+            brainrotPart.Parent = brainrotModel
+
+            -- Overhead GUI
+            local billboard = Instance.new("BillboardGui")
+            billboard.Size = UDim2.new(0, 150, 0, 60)
+            billboard.StudsOffset = Vector3.new(0, 3, 0)
+            billboard.Adornee = brainrotPart
+            billboard.Parent = brainrotPart
+
+            local nameLabel = Instance.new("TextLabel")
+            nameLabel.Size = UDim2.new(1, 0, 0.5, 0)
+            nameLabel.BackgroundTransparency = 1
+            nameLabel.Text = selectedBrainrot
+            nameLabel.TextColor3 = Color3.new(1, 1, 1)
+            nameLabel.TextSize = 16
+            nameLabel.Font = Enum.Font.GothamBold
+            nameLabel.Parent = billboard
+
+            local moneyLabel = Instance.new("TextLabel")
+            moneyLabel.Size = UDim2.new(1, 0, 0.5, 0)
+            moneyLabel.Position = UDim2.new(0, 0, 0.5, 0)
+            moneyLabel.BackgroundTransparency = 1
+            moneyLabel.Text = "Money: $0"
+            moneyLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+            moneyLabel.TextSize = 14
+            moneyLabel.Font = Enum.Font.Gotham
+            moneyLabel.Parent = billboard
+
+            -- Simulate money collection (visual only)
+            local fakeMoney = 0
+            local moneyConnection
+            moneyConnection = RunService.Heartbeat:Connect(function()
+                fakeMoney = fakeMoney + 10
+                moneyLabel.Text = "Money: $" .. fakeMoney
+            end)
+
+            -- Black hole spawn effect
+            local spawnPoint = Workspace:FindFirstChild("Conveyor") and
+                              Workspace.Conveyor.Position + Vector3.new(0, 5, 0) or
+                              character.PrimaryPart.Position + Vector3.new(0, 10, 0)
+            brainrotModel.PrimaryPart = brainrotPart
+            brainrotPart.Position = spawnPoint
+
+            -- Particle Emitter for black hole
+            local blackHole = Instance.new("ParticleEmitter")
+            blackHole.Color = ColorSequence.new(Color3.fromRGB(0, 0, 0))
+            blackHole.Size = NumberSequence.new(2)
+            blackHole.Texture = "rbxassetid://243098098" -- Swirl texture
+            blackHole.Lifetime = NumberRange.new(1)
+            blackHole.Rate = 50
+            blackHole.Speed = NumberRange.new(10)
+            blackHole.Parent = brainrotPart
+            blackHole.Enabled = true
+            task.wait(2)
+            blackHole.Enabled = false
+
+            -- Animate to base spot
+            local tweenInfo = TweenInfo.new(3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            local tween = TweenService:Create(brainrotPart, tweenInfo, {Position = openSpot.Position + Vector3.new(0, 1, 0)})
+            tween:Play()
+            tween.Completed:Wait()
+
+            -- Place in spot
+            brainrotModel.Parent = openSpot
+
+            -- Clean up
+            brainrotModel.AncestryChanged:Connect(function()
+                if moneyConnection then
+                    moneyConnection:Disconnect()
+                end
+            end)
+        end
+
+        Rayfield:Notify({
+            Title = success and "Brainrot Spawned" or "Visual Brainrot Spawned",
+            Content = success and "Spawned " .. selectedBrainrot .. " with " .. selectedMutation .. " mutation." or
+                      "Visual " .. selectedBrainrot .. " with " .. selectedMutation .. " mutation spawned.",
+            Duration = 5
+        })
+    end
+})
+
+-- Initial notification
+Rayfield:Notify({
+    Title = "Leven Hub Loaded",
+    Content = "Very Cool theme ready! Select a brainrot and mutation to spawn.",
+    Duration = 5
+})
